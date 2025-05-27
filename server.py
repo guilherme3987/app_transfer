@@ -4,7 +4,7 @@ import os
 import datetime
 
 HOST = '0.0.0.0'  # Escuta em todas as interfaces de rede disponíveis
-PORT = 12345      # Porta para a conexão
+PORT = 5050      # Porta para a conexão
 UPLOAD_DIR = 'uploads' # Diretório para salvar os arquivos recebidos
 LOG_FILE = 'transfer_log.txt' # Arquivo de log
 
