@@ -7,16 +7,21 @@ SERVER_PORT = 5050             # A mesma porta usada no servidor
 
 def send_file(filepath):
     """Envia um arquivo para o servidor."""
-    if not os.path.exists(filepath):
-        print(f"Erro: Arquivo '{filepath}' não encontrado.")
+    # Use os.path.normpath para normalizar o caminho de acordo com o SO
+    # Isso ajuda a lidar com diferentes separadores de diretório (/, \)
+    # e outras inconsistências no path digitado pelo usuário.
+    normalized_filepath = os.path.normpath(filepath)
+
+    if not os.path.exists(normalized_filepath):
+        print(f"Erro: Arquivo ou diretório '{normalized_filepath}' não encontrado.")
         return
 
-    if not os.path.isfile(filepath):
-        print(f"Erro: '{filepath}' não é um arquivo. Por favor, forneça o caminho completo para um arquivo.")
+    if not os.path.isfile(normalized_filepath):
+        print(f"Erro: '{normalized_filepath}' não é um arquivo. Por favor, forneça o caminho completo para um arquivo.")
         return
 
-    filename = os.path.basename(filepath)
-    file_size = os.path.getsize(filepath)
+    filename = os.path.basename(normalized_filepath)
+    file_size = os.path.getsize(normalized_filepath)
 
     try:
         print(f"Tentando conectar ao servidor em {SERVER_HOST}:{SERVER_PORT}...")
@@ -36,15 +41,13 @@ def send_file(filepath):
         # Envia o conteúdo do arquivo em chunks
         print(f"Enviando arquivo '{filename}' ({file_size} bytes)...")
         bytes_sent = 0
-        with open(filepath, 'rb') as f:
+        with open(normalized_filepath, 'rb') as f: # Use o caminho normalizado aqui
             while True:
                 bytes_read = f.read(4096)
                 if not bytes_read:
                     break
                 client_socket.sendall(bytes_read)
                 bytes_sent += len(bytes_read)
-                # Opcional: mostrar progresso
-                # print(f"Progresso: {bytes_sent}/{file_size} bytes ({bytes_sent/file_size*100:.2f}%)")
 
         print(f"Arquivo '{filename}' enviado com sucesso. Total enviado: {bytes_sent} bytes.")
 
@@ -58,13 +61,5 @@ def send_file(filepath):
             print("Conexão com o servidor encerrada.")
 
 if __name__ == "__main__":
-    # Remove a criação automática do arquivo de teste
-    # test_file_name = "teste.txt"
-    # with open(test_file_name, "w") as f:
-    #     f.write("Este é um arquivo de teste para transferência.\n")
-    #     f.write("Ele contém algumas linhas de texto.\n")
-    #     f.write("Espero que seja transferido com sucesso!\n")
-    # print(f"Arquivo de teste '{test_file_name}' criado.")
-
-    file_to_send = input("Digite o caminho completo do arquivo a ser enviado: ")
-    send_file(file_to_send)
+    file_to_send_raw = input("Digite o caminho completo do arquivo a ser enviado: ")
+    send_file(file_to_send_raw)
