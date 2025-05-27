@@ -1,77 +1,39 @@
+# servidor.py
 import socket
 import os
-import datetime
 
-HOST = '0.0.0.0'
-PORT = 5051
-UPLOAD_DIR = 'uploads'
-LOG_FILE = 'transfer_log.txt'
+HOST = '0.0.0.0'  # Aceita conexões de qualquer IP
+PORT = 5001
+TAM_BUFFER = 1024
 
-# Cria diretório de upload se não existir
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+def iniciar_servidor():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind((HOST, PORT))
+    sock.listen(1)
+    print(f"[Servidor] Escutando em {HOST}:{PORT}...")
 
-def log_transfer(filename, client_address, status):
-    """Registra logs da transferência."""
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    with open(LOG_FILE, 'a') as f:
-        f.write(f"[{timestamp}] Arquivo: {filename} | Cliente: {client_address[0]}:{client_address[1]} | Status: {status}\n")
+    conn, addr = sock.accept()
+    print(f"[Servidor] Conexão estabelecida com {addr}")
 
-def handle_single_client(conn, addr):
-    """Recebe arquivo de um cliente."""
-    print(f"\n--- Conexão estabelecida com {addr} ---")
-    filename = None
     try:
-        filename_size_bytes = conn.recv(4)
-        if not filename_size_bytes:
-            raise ValueError("Nome do arquivo não recebido.")
-        
-        filename_size = int.from_bytes(filename_size_bytes, 'big')
-        filename_bytes = conn.recv(filename_size)
-        filename = filename_bytes.decode('utf-8')
-        filepath = os.path.join(UPLOAD_DIR, filename)
+        # Recebe o nome do arquivo
+        nome_arquivo = conn.recv(TAM_BUFFER).decode()
+        print(f"[Servidor] Nome do arquivo: {nome_arquivo}")
 
-        file_size_bytes = conn.recv(8)
-        if not file_size_bytes:
-            raise ValueError("Tamanho do arquivo não recebido.")
-        
-        file_size = int.from_bytes(file_size_bytes, 'big')
-        received_bytes = 0
-
-        with open(filepath, 'wb') as f:
-            while received_bytes < file_size:
-                chunk = conn.recv(min(4096, file_size - received_bytes))
-                if not chunk:
+        # Abre arquivo para escrita binária
+        with open(nome_arquivo, 'wb') as f:
+            while True:
+                dados = conn.recv(TAM_BUFFER)
+                if not dados:
                     break
-                f.write(chunk)
-                received_bytes += len(chunk)
-
-        if received_bytes == file_size:
-            print(f"Arquivo '{filename}' recebido com sucesso.")
-            log_transfer(filename, addr, "Sucesso")
-        else:
-            print(f"Falha: Recebido {received_bytes} de {file_size} bytes.")
-            log_transfer(filename, addr, "Falha: Incompleto")
-            os.remove(filepath) if os.path.exists(filepath) else None
-
+                f.write(dados)
+        print(f"[Servidor] Arquivo '{nome_arquivo}' recebido com sucesso.")
     except Exception as e:
-        print(f"Erro: {e}")
-        log_transfer(filename if filename else "N/A", addr, f"Falha: {e}")
+        print(f"[Servidor] Erro: {e}")
     finally:
         conn.close()
-        print(f"--- Conexão encerrada com {addr} ---")
-
-def start_server():
-    """Inicia o servidor."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-        server_socket.bind((HOST, PORT))
-        server_socket.listen(1)
-        print(f"Servidor escutando em {HOST}:{PORT}")
-        print(f"Uploads em: {os.path.abspath(UPLOAD_DIR)}")
-        print(f"Log em: {os.path.abspath(LOG_FILE)}")
-
-        while True:
-            conn, addr = server_socket.accept()
-            handle_single_client(conn, addr)
+        sock.close()
+        print("[Servidor] Conexão encerrada.")
 
 if __name__ == "__main__":
-    start_server()
+    iniciar_servidor()
