@@ -3,7 +3,7 @@ import os
 
 SERVER_HOST = '192.168.1.1'  # *** SUBSTITUA PELO ENDEREÇO IP DO SEU SERVIDOR ***
                                # Use '127.0.0.1' se o servidor estiver na mesma máquina
-SERVER_PORT = 5050             # A mesma porta usada no servidor
+SERVER_PORT = 5051             # A mesma porta usada no servidor
 
 def send_file(filepath):
     """Envia um arquivo para o servidor."""

@@ -1,0 +1,22 @@
+Windows 
+1. Ver IP (IPv4)
+ipconfig | findstr "IPv4"
+
+2. Ver Portas em Uso
+netstat -ano | findstr "LISTEN"
+
+3. Testar se uma Porta Está Livre
+Test-NetConnection -ComputerName localhost -Port 5050
+
+Linux (Terminal)
+1. Ver IP (IPv4)
+
+ip a | grep "inet " | grep -v "127.0.0.1"
+
+2. Ver Portas em Uso
+ss -tulnp | grep LISTEN
+
+3. Testar se uma Porta Está Livre
+nc -zv ip porta
+Se retornar Connection refused → Porta livre.
+
