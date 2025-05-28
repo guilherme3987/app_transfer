@@ -1,30 +1,36 @@
-# cliente.py
 import socket
 import os
+from datetime import datetime
+import time
 
-# Altere para o IP real da sua VM Linux (ex: 192.168.0.100)
-HOST = input("Digite o IP do servidor (VM Linux): ").strip()
-PORT = 5001
 TAM_BUFFER = 1024
+PORTA = 5001
 
-def enviar_arquivo():
+def iniciar_cliente():
+    ip_servidor = input("Digite o IP do servidor (VM Linux): ").strip()
     caminho_arquivo = input("Digite o caminho completo do arquivo a ser enviado: ").strip()
 
     if not os.path.exists(caminho_arquivo):
-        print("[Cliente] Arquivo não encontrado.")
+        print("[Cliente] Erro: Arquivo não encontrado.")
         return
 
     nome_arquivo = os.path.basename(caminho_arquivo)
 
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((HOST, PORT))
-        print(f"[Cliente] Conectado a {HOST}:{PORT}")
+        sock.connect((ip_servidor, PORTA))
+        print(f"[Cliente] Conectado ao servidor {ip_servidor}:{PORTA}")
 
-        # Envia nome do arquivo primeiro
+        # Envia nome do arquivo
         sock.sendall(nome_arquivo.encode())
 
-        # Envia conteúdo do arquivo
+        # Aguarda um pequeno tempo para garantir que o nome foi enviado
+        time.sleep(0.5)
+
+        # Marca o início da transferência
+        inicio = datetime.now()
+
+        # Envia dados do arquivo
         with open(caminho_arquivo, 'rb') as f:
             while True:
                 dados = f.read(TAM_BUFFER)
@@ -32,7 +38,14 @@ def enviar_arquivo():
                     break
                 sock.sendall(dados)
 
-        print(f"[Cliente] Arquivo '{nome_arquivo}' enviado com sucesso.")
+        fim = datetime.now()
+        duracao = (fim - inicio).total_seconds()
+
+        print(f"[Cliente] Arquivo enviado com sucesso.")
+        print(f"[Cliente] Início: {inicio}")
+        print(f"[Cliente] Fim: {fim}")
+        print(f"[Cliente] Duração: {duracao:.3f} segundos")
+
     except Exception as e:
         print(f"[Cliente] Erro: {e}")
     finally:
@@ -40,4 +53,4 @@ def enviar_arquivo():
         print("[Cliente] Conexão encerrada.")
 
 if __name__ == "__main__":
-    enviar_arquivo()
+    iniciar_cliente()
