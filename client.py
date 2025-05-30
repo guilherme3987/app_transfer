@@ -1,57 +1,55 @@
 import socket
 import os
-from datetime import datetime
-import time
-from con_config import obter_dados_conexao  
+from con_config import obter_dados_conexao
 
-_, PORT, TAM_BUFFER = obter_dados_conexao()  
+_, PORT, TAM_BUFFER = obter_dados_conexao()
 
+def enviar_arquivo(sock, caminho):
+    """Envia um único arquivo"""
+    nome = os.path.basename(caminho)
+    tamanho = os.path.getsize(caminho)
+    
+    sock.sendall("FILE".encode())
+    sock.sendall(nome.encode())
+    sock.sendall(tamanho.to_bytes(8, byteorder='big'))
+    
+    with open(caminho, 'rb') as f:
+        while True:
+            dados = f.read(TAM_BUFFER)
+            if not dados:
+                break
+            sock.sendall(dados)
+    
+    return sock.recv(TAM_BUFFER).decode() == "SUCESSO"
+
+def enviar_pasta(sock, caminho_pasta):
+    """Envia todos os arquivos de uma pasta"""
+    nome_pasta = os.path.basename(caminho_pasta)
+    sock.sendall("DIR".encode())
+    sock.sendall(nome_pasta.encode())
+
+    for raiz, _, arquivos in os.walk(caminho_pasta):
+        for arquivo in arquivos:
+            caminho_completo = os.path.join(raiz, arquivo)
+            sock.sendall("FILE_IN_DIR".encode())
+            if not enviar_arquivo(sock, caminho_completo):
+                return False
+
+    sock.sendall("FIM_DIR".encode())
+    return True
 
 def iniciar_cliente():
-    ip_servidor = input("Digite o IP do servidor (VM Linux): ").strip()
-    caminho_arquivo = input("Digite o caminho completo do arquivo a ser enviado: ").strip()
-
-    if not os.path.exists(caminho_arquivo):
-        print("[Cliente] Erro: Arquivo não encontrado.")
-        return
-
-    nome_arquivo = os.path.basename(caminho_arquivo)
-
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((ip_servidor, PORT))
-        print(f"[Cliente] Conectado ao servidor {ip_servidor}:{PORT}")
-
-        # Envia nome do arquivo
-        sock.sendall(nome_arquivo.encode())
-
-        # Aguarda um pequeno tempo para garantir que o nome foi enviado
-        time.sleep(0.5)
-
-        # Marca o início da transferência
-        inicio = datetime.now()
-
-        # Envia dados do arquivo
-        with open(caminho_arquivo, 'rb') as f:
-            while True:
-                dados = f.read(TAM_BUFFER)
-                if not dados:
-                    break
-                sock.sendall(dados)
-
-        fim = datetime.now()
-        duracao = (fim - inicio).total_seconds()
-
-        print(f"[Cliente] Arquivo enviado com sucesso.")
-        print(f"[Cliente] Início: {inicio}")
-        print(f"[Cliente] Fim: {fim}")
-        print(f"[Cliente] Duração: {duracao:.3f} segundos")
-
-    except Exception as e:
-        print(f"[Cliente] Erro: {e}")
-    finally:
-        sock.close()
-        print("[Cliente] Conexão encerrada.")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((input("IP do servidor: "), PORT))
+    
+    caminho = input("Caminho do arquivo/pasta: ")
+    if os.path.isfile(caminho):
+        enviar_arquivo(sock, caminho)
+    elif os.path.isdir(caminho):
+        enviar_pasta(sock, caminho)
+    
+    sock.sendall("FIM".encode())
+    sock.close()
 
 if __name__ == "__main__":
     iniciar_cliente()
