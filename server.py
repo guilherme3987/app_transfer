@@ -5,19 +5,19 @@ from datetime import datetime
 from con_config import obter_dados_conexao
 
 HOST, PORT, TAM_BUFFER = obter_dados_conexao()
+BASE_DIR = "recebidos"
 
 def iniciar_servidor():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((HOST, PORT))
     sock.listen(1)
-    print(f"[Servidor] Escutando em {HOST}:{PORT}...")
+    print(f"🖥️ Servidor ouvindo em {HOST}:{PORT}")
 
     conn, addr = sock.accept()
-    print(f"[Servidor] Conexão estabelecida com {addr}")
+    print(f"🔌 Conexão estabelecida com {addr}")
 
     try:
         while True:
-            # Recebe o tipo de transferência (FILE ou DIR)
             tipo = conn.recv(TAM_BUFFER).decode()
             if not tipo or tipo == "FIM":
                 break
@@ -28,42 +28,41 @@ def iniciar_servidor():
                 receber_pasta(conn, addr)
 
     except Exception as e:
-        print(f"[Servidor] Erro: {e}")
+        print(f"❌ Erro: {e}")
     finally:
         conn.close()
         sock.close()
-        print("[Servidor] Conexão encerrada.")
+        print("🛑 Servidor encerrado")
 
-def receber_arquivo(conn, addr):
-    """Recebe um único arquivo"""
-    caminho = conn.recv(TAM_BUFFER).decode()
-    nome_arquivo = os.path.basename(caminho)
-    caminho_destino = os.path.join("recebidos", nome_arquivo)
+def receber_arquivo(conn, addr, caminho_relativo=""):
+    """Recebe um arquivo com caminho relativo"""
+    nome_arquivo = conn.recv(TAM_BUFFER).decode()
+    caminho_completo = os.path.join(BASE_DIR, caminho_relativo, nome_arquivo)
     
-    os.makedirs(os.path.dirname(caminho_destino), exist_ok=True)
+    os.makedirs(os.path.dirname(caminho_completo), exist_ok=True)
     
-    tamanho_arquivo = int.from_bytes(conn.recv(8), byteorder='big')
-    tamanho_recebido = 0
+    tamanho = int.from_bytes(conn.recv(8), byteorder='big')
+    recebidos = 0
     inicio = datetime.now()
 
-    with open(caminho_destino, 'wb') as f:
-        while tamanho_recebido < tamanho_arquivo:
-            dados = conn.recv(min(TAM_BUFFER, tamanho_arquivo - tamanho_recebido))
+    with open(caminho_completo, 'wb') as f:
+        while recebidos < tamanho:
+            dados = conn.recv(min(TAM_BUFFER, tamanho - recebidos))
             if not dados:
                 break
             f.write(dados)
-            tamanho_recebido += len(dados)
+            recebidos += len(dados)
 
-    status = "SUCESSO" if tamanho_recebido == tamanho_arquivo else "FALHA"
+    status = "SUCESSO" if recebidos == tamanho else "FALHA"
     conn.sendall(status.encode())
     
-    registrar_log(nome_arquivo, tamanho_recebido, inicio, datetime.now(), addr[0], status)
+    print(f"📄 Arquivo recebido: {os.path.join(caminho_relativo, nome_arquivo)}")
+    registrar_log(nome_arquivo, recebidos, inicio, datetime.now(), addr[0], status)
 
 def receber_pasta(conn, addr):
-    """Recebe múltiplos arquivos de uma pasta"""
+    """Recebe uma pasta com estrutura completa"""
     nome_pasta = conn.recv(TAM_BUFFER).decode()
-    caminho_destino = os.path.join("recebidos", nome_pasta)
-    os.makedirs(caminho_destino, exist_ok=True)
+    print(f"📦 Recebendo pasta: {nome_pasta}")
 
     while True:
         tipo = conn.recv(TAM_BUFFER).decode()
@@ -71,7 +70,12 @@ def receber_pasta(conn, addr):
             break
         
         if tipo == "FILE_IN_DIR":
-            receber_arquivo(conn, addr)
+            caminho_rel = conn.recv(TAM_BUFFER).decode()
+            receber_arquivo(conn, addr, os.path.join(nome_pasta, caminho_rel))
+        
+        elif tipo == "SUB_DIR":
+            subpasta = conn.recv(TAM_BUFFER).decode()
+            os.makedirs(os.path.join(BASE_DIR, nome_pasta, subpasta), exist_ok=True)
 
 def registrar_log(nome, tamanho, inicio, fim, ip, status):
     with open('log_transferencias.csv', 'a', newline='') as csvfile:
