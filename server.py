@@ -40,7 +40,7 @@ def iniciar_servidor():
         print(f"[Servidor] Fim: {fim}")
         print(f"[Servidor] Duração: {duracao:.3f} segundos")
 
-        registrar_log(nome_arquivo, tamanho_recebido, inicio, fim, duracao)
+        registrar_log(nome_arquivo, tamanho_recebido, inicio, fim, duracao, addr[0])
 
     except Exception as e:
         print(f"[Servidor] Erro: {e}")
@@ -49,20 +49,24 @@ def iniciar_servidor():
         sock.close()
         print("[Servidor] Conexão encerrada.")
 
-def registrar_log(nome_arquivo, tamanho, inicio, fim, duracao):
+def registrar_log(nome_arquivo, tamanho, inicio, fim, duracao, endereco_ip):
     log_csv = 'log_transferencias.csv'
     existe = os.path.exists(log_csv)
+
+    taxa_transferencia = tamanho / duracao if duracao > 0 else 0  # Calcula a taxa de transferência média (tam_arquivo / tempo)
 
     with open(log_csv, 'a', newline='') as csvfile:
         writer = csv.writer(csvfile)
         if not existe:
-            writer.writerow(['nome_arquivo', 'tamanho_bytes', 'inicio', 'fim', 'duracao_segundos'])
+            writer.writerow(['nome_arquivo', 'tamanho_bytes', 'inicio', 'fim', 'duracao_segundos', 'endereco_ip', 'taxa_transferencia_bytes_por_segundo'])
         writer.writerow([
             nome_arquivo,
             tamanho,
             inicio.isoformat(),
             fim.isoformat(),
-            f"{duracao:.3f}"
+            f"{duracao:.3f}",
+            endereco_ip,
+            f"{taxa_transferencia:.3f}"
         ])
 
 if __name__ == "__main__":
