@@ -2,9 +2,9 @@ import socket
 import os
 from datetime import datetime
 import time
+from con_config import HOST, PORT, TAM_BUFFER
 
-TAM_BUFFER = 1024
-PORTA = 5001
+TAM_BUFFER, PORTA = obter_dados_conexao()
 
 def iniciar_cliente():
     ip_servidor = input("Digite o IP do servidor (VM Linux): ").strip()

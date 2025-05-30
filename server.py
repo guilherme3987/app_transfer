@@ -2,10 +2,8 @@ import socket
 import os
 import csv
 from datetime import datetime
-
-HOST = '0.0.0.0'  # Aceita conexões de qualquer IP
-PORT = 5001
-TAM_BUFFER = 1024
+from con_config import HOST, PORT, TAM_BUFFER
+HOST,PORT,TAM_BUFFER = obter_dados_conexao()
 
 
 def iniciar_servidor():
