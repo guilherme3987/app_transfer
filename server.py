@@ -2,8 +2,9 @@ import socket
 import os
 import csv
 from datetime import datetime
-from con_config import HOST, PORT, TAM_BUFFER
-HOST,PORT,TAM_BUFFER = obter_dados_conexao()
+from con_config import obter_dados_conexao  
+
+HOST, PORT, TAM_BUFFER = obter_dados_conexao()
 
 
 def iniciar_servidor():
@@ -48,8 +49,6 @@ def iniciar_servidor():
         sock.close()
         print("[Servidor] Conexão encerrada.")
 
-
-
 def registrar_log(nome_arquivo, tamanho, inicio, fim, duracao):
     log_csv = 'log_transferencias.csv'
     existe = os.path.exists(log_csv)
@@ -65,7 +64,6 @@ def registrar_log(nome_arquivo, tamanho, inicio, fim, duracao):
             fim.isoformat(),
             f"{duracao:.3f}"
         ])
-
 
 if __name__ == "__main__":
     iniciar_servidor()
