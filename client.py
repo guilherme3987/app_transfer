@@ -22,7 +22,6 @@ def _send_data(sock, data):
         sock.sendall(data)
     except Exception as e:
         print(f"❌ [Erro _send_data] Falha ao enviar dados: {e}")
-        raise # Re-lança a exceção para ser tratada em um nível superior
 
 def _receive_data(sock):
     """
@@ -43,8 +42,7 @@ def _receive_data(sock):
         return data
     except Exception as e:
         print(f"❌ [Erro _receive_data] Falha ao receber dados: {e}")
-        raise # Re-lança a exceção
-
+        return
 def _recv_all(sock, n):
     """
     Função auxiliar para garantir que todos os 'n' bytes sejam recebidos.
@@ -78,7 +76,7 @@ def calcular_checksum_md5(caminho_arquivo):
         return hasher.hexdigest()
     except Exception as e:
         print(f"❌ [Erro] Não foi possível calcular o checksum para '{caminho_arquivo}': {e}")
-        return None
+        return 
 
 # --- Funções de Envio ---
 
