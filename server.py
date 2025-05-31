@@ -66,13 +66,15 @@ def registrar_log(nome_arquivo, tamanho, inicio, fim, duracao, endereco_ip, stat
     existe = os.path.exists(log_csv)
 
     taxa_transferencia = tamanho / duracao if duracao > 0 else 0
+    extensao_arquivo = os.path.splitext(nome_arquivo)[1] if nome_arquivo != "N/A" else "N/A"
 
     with open(log_csv, 'a', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
         if not existe:
-            writer.writerow(['nome_arquivo', 'tamanho_bytes', 'inicio', 'fim', 'duracao_segundos', 'endereco_ip', 'taxa_transferencia_bytes_por_segundo', 'status', 'motivo_falha'])
+            writer.writerow(['nome_arquivo', 'extensao_arquivo', 'tamanho_bytes', 'inicio', 'fim', 'duracao_segundos', 'endereco_ip', 'taxa_transferencia_bytes_por_segundo', 'status', 'motivo_falha'])
         writer.writerow([
             nome_arquivo,
+            extensao_arquivo,
             tamanho,
             inicio.isoformat(),
             fim.isoformat(),
