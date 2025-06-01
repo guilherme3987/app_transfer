@@ -76,7 +76,7 @@ def calcular_checksum_md5(caminho_arquivo):
         return hasher.hexdigest()
     except Exception as e:
         print(f"❌ [Erro] Não foi possível calcular o checksum para '{caminho_arquivo}': {e}")
-        return 
+        return None
 
 # --- Funções de Envio ---
 
