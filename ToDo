@@ -1,0 +1,9 @@
+- Testar com arquivos mais  grandes
+
+- Implementar mais de um cliente
+  - Multithreading  
+  
+- Implementar checksum no cliente e servidor checa 
+
+- Análise por dias da semana
+  - Transformar o timestamp em dia da semana
