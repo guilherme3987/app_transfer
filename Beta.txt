@@ -1,0 +1,344 @@
+import socket
+import os
+import hashlib
+from datetime import datetime
+from con_config import obter_dados_conexao
+
+_, PORT, TAM_BUFFER = obter_dados_conexao()
+
+# --- Comunicação com cabeçalho textual (sem struct) ---
+
+def _send_data(sock, data):
+    try:
+        header = f"{len(data)}\n".encode('utf-8')
+        sock.sendall(header)
+        sock.sendall(data)
+    except Exception as e:
+        print(f"❌ [Erro _send_data] Falha ao enviar dados: {e}")
+
+def _receive_data(sock):
+    try:
+        header = b''
+        while not header.endswith(b'\n'):
+            byte = sock.recv(1)
+            if not byte:
+                return None
+            header += byte
+        data_len = int(header.strip())
+        return _recv_all(sock, data_len)
+    except Exception as e:
+        print(f"❌ [Erro _receive_data] Falha ao receber dados: {e}")
+        return None
+
+def _recv_all(sock, n):
+    data = b''
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data += packet
+    return data
+
+# --- Funções de Envio ---
+
+def calcular_checksum_md5(caminho_arquivo):
+    hasher = hashlib.md5()
+    try:
+        with open(caminho_arquivo, 'rb') as f:
+            while chunk := f.read(TAM_BUFFER):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+    except Exception as e:
+        print(f"❌ [Erro] Não foi possível calcular o checksum para '{caminho_arquivo}': {e}")
+        return None
+
+def enviar_arquivo(sock, caminho_arquivo, caminho_base_pasta=""):
+    nome_arquivo = os.path.basename(caminho_arquivo)
+    relative_path = os.path.relpath(caminho_arquivo, caminho_base_pasta) if caminho_base_pasta else nome_arquivo
+
+    try:
+        file_size = os.path.getsize(caminho_arquivo)
+        checksum = calcular_checksum_md5(caminho_arquivo)
+        if checksum is None:
+            return False
+
+        _send_data(sock, relative_path.encode('utf-8'))
+        _send_data(sock, str(file_size).encode('utf-8'))
+        _send_data(sock, checksum.encode('utf-8'))
+
+        with open(caminho_arquivo, 'rb') as f:
+            content = f.read()
+        _send_data(sock, content)
+
+        ack = _receive_data(sock)
+        return ack and ack.decode('utf-8') == "ACK_FILE_OK"
+    except Exception as e:
+        print(f"❌ [Cliente] Erro ao enviar arquivo '{relative_path}': {e}")
+        return False
+
+def enviar_pasta(sock, caminho_pasta):
+    base_dir_name = os.path.basename(caminho_pasta)
+    _send_data(sock, base_dir_name.encode('utf-8'))
+
+    for root, _, files in os.walk(caminho_pasta):
+        for file_name in files:
+            full_path = os.path.join(root, file_name)
+            _send_data(sock, b"NEXT_FILE")
+            if not enviar_arquivo(sock, full_path, caminho_pasta):
+                _send_data(sock, b"ABORT_DIR")
+                return False
+
+    _send_data(sock, b"END_DIR")
+    ack = _receive_data(sock)
+    return ack and ack.decode('utf-8') == "ACK_DIR_OK"
+
+def iniciar_cliente():
+    try:
+        ip_servidor = input("IP do servidor: ").strip()
+        caminho = input("Caminho do arquivo ou pasta: ").strip()
+
+        if not os.path.exists(caminho):
+            print("❌ Caminho inválido.")
+            return
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((ip_servidor, PORT))
+
+        if os.path.isfile(caminho):
+            _send_data(sock, b"FILE")
+            sucesso = enviar_arquivo(sock, caminho)
+        else:
+            _send_data(sock, b"DIR")
+            sucesso = enviar_pasta(sock, caminho)
+
+        print("✅ Transferência bem-sucedida!" if sucesso else "❌ Falha na transferência.")
+
+    except Exception as e:
+        print(f"Erro: {e}")
+    finally:
+        if 'sock' in locals():
+            sock.close()
+
+if __name__ == "__main__":
+    iniciar_cliente()
+
+
+
+import socket
+import os
+import hashlib
+from datetime import datetime
+from con_config import obter_dados_conexao
+
+HOST, PORT, TAM_BUFFER = obter_dados_conexao()
+BASE_DIR = "recebidos"
+
+# --- Comunicação com cabeçalho textual (sem struct) ---
+
+def _send_data(sock, data):
+    try:
+        header = f"{len(data)}\n".encode('utf-8')
+        sock.sendall(header)
+        sock.sendall(data)
+    except Exception as e:
+        print(f"❌ [Erro _send_data] Falha ao enviar dados: {e}")
+
+def _receive_data(sock):
+    try:
+        header = b''
+        while not header.endswith(b'\n'):
+            byte = sock.recv(1)
+            if not byte:
+                return None
+            header += byte
+        data_len = int(header.strip())
+        return _recv_all(sock, data_len)
+    except Exception as e:
+        print(f"❌ [Erro _receive_data] Falha ao receber dados: {e}")
+        return None
+
+def _recv_all(sock, n):
+    data = b''
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data += packet
+    return data
+
+# --- Funções de Recepção ---
+
+def receber_arquivo(conn, base_dir=""):
+    try:
+        relative_path = _receive_data(conn).decode('utf-8')
+        expected_size = int(_receive_data(conn).decode('utf-8'))
+        expected_checksum = _receive_data(conn).decode('utf-8')
+        content = _receive_data(conn)
+
+        if content is None or len(content) != expected_size:
+            _send_data(conn, b"ACK_FILE_FAIL")
+            return
+
+        checksum = hashlib.md5(content).hexdigest()
+        if checksum != expected_checksum:
+            _send_data(conn, b"ACK_FILE_FAIL")
+            return
+
+        full_path = os.path.join(BASE_DIR, base_dir, relative_path)
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, 'wb') as f:
+            f.write(content)
+
+        _send_data(conn, b"ACK_FILE_OK")
+
+    except Exception as e:
+        print(f"Erro ao receber arquivo: {e}")
+        _send_data(conn, b"ACK_FILE_FAIL")
+
+def receber_pasta(conn):
+    try:
+        base_dir_name = _receive_data(conn).decode('utf-8')
+        os.makedirs(os.path.join(BASE_DIR, base_dir_name), exist_ok=True)
+
+        while True:
+            signal = _receive_data(conn)
+            if signal is None:
+                break
+            signal = signal.decode('utf-8')
+
+            if signal == "NEXT_FILE":
+                receber_arquivo(conn, base_dir=base_dir_name)
+            elif signal == "END_DIR":
+                _send_data(conn, b"ACK_DIR_OK")
+                break
+            elif signal == "ABORT_DIR":
+                _send_data(conn, b"ACK_DIR_FAIL")
+                break
+    except Exception as e:
+        print(f"Erro ao receber pasta: {e}")
+        _send_data(conn, b"ACK_DIR_FAIL")
+
+def iniciar_servidor():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind((HOST, PORT))
+        sock.listen(1)
+        print(f"Servidor ouvindo em {HOST}:{PORT}")
+
+        conn, addr = sock.accept()
+        print(f"Conexão de {addr}")
+
+        tipo = _receive_data(conn)
+        if tipo is None:
+            return
+        tipo = tipo.decode('utf-8')
+
+        if tipo == "FILE":
+            receber_arquivo(conn)
+        elif tipo == "DIR":
+            receber_pasta(conn)
+        else:
+            print("Tipo de transferência desconhecido.")
+
+        conn.close()
+    except Exception as e:
+        print(f"Erro no servidor: {e}")
+    finally:
+        sock.close()
+
+if __name__ == "__main__":
+    iniciar_servidor()
+
+
+############################### Versão com multithreads para múltiplos clientes ############################
+############################## Log geral e por cliente #####################################################
+############################# Gerar análise por cliente ####################################################
+import csv
+
+def registrar_log(cliente_id, nome_arquivo, tamanho, inicio, fim, status, motivo_falha=""):
+    duracao = (fim - inicio).total_seconds()
+    taxa = tamanho / duracao if duracao > 0 else 0
+    extensao = os.path.splitext(nome_arquivo)[1] if nome_arquivo != "N/A" else "N/A"
+
+    linha = [
+        cliente_id,
+        nome_arquivo,
+        extensao,
+        tamanho,
+        inicio.isoformat(),
+        fim.isoformat(),
+        f"{duracao:.3f}",
+        f"{taxa:.2f}",
+        status,
+        motivo_falha
+    ]
+
+    # Log geral
+    with open("log_transferencias.csv", 'a', newline='', encoding='utf-8') as geral:
+        writer = csv.writer(geral)
+        if geral.tell() == 0:
+            writer.writerow(['cliente_id', 'nome_arquivo', 'extensao', 'tamanho_bytes', 'inicio', 'fim', 'duracao_seg', 'taxa_Bps', 'status', 'motivo_falha'])
+        writer.writerow(linha)
+
+    # Log individual
+    log_cliente = f"cliente_{cliente_id}.csv"
+    with open(log_cliente, 'a', newline='', encoding='utf-8') as indiv:
+        writer = csv.writer(indiv)
+        if indiv.tell() == 0:
+            writer.writerow(['nome_arquivo', 'extensao', 'tamanho_bytes', 'inicio', 'fim', 'duracao_seg', 'taxa_Bps', 'status', 'motivo_falha'])
+        writer.writerow(linha[1:])
+
+
+def receber_arquivo(conn, base_dir, cliente_id):
+    inicio = datetime.now()
+    nome = "N/A"
+    tamanho = 0
+    status = "FALHA"
+    motivo = ""
+
+    try:
+        nome_bytes = _receive_data(conn)
+        if not nome_bytes:
+            raise Exception("Nome não recebido")
+        nome = nome_bytes.decode()
+
+        tamanho = int(_receive_data(conn).decode())
+        checksum = _receive_data(conn).decode()
+        conteudo = _receive_data(conn)
+
+        if not conteudo or len(conteudo) != tamanho:
+            motivo = "Tamanho incorreto"
+            _send_data(conn, b"ACK_FILE_FAIL")
+            return
+
+        if calcular_checksum_bytes(conteudo) != checksum:
+            motivo = "Checksum incorreto"
+            _send_data(conn, b"ACK_FILE_FAIL")
+            return
+
+        path = os.path.join(BASE_DIR, base_dir, nome)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'wb') as f:
+            f.write(conteudo)
+
+        _send_data(conn, b"ACK_FILE_OK")
+        status = "SUCESSO"
+
+    except Exception as e:
+        motivo = str(e)
+        _send_data(conn, b"ACK_FILE_FAIL")
+    finally:
+        fim = datetime.now()
+        registrar_log(cliente_id, nome, tamanho, inicio, fim, status, motivo)
+
+
+Em receber_pasta:
+
+receber_arquivo(conn, os.path.join(base_dir, pasta), cliente_id)
+
+Em lidar_com_cliente:
+
+if tipo_transferencia == "FILE":
+    receber_arquivo(conn, cliente_id, cliente_id)
+elif tipo_transferencia == "DIR":
+    receber_pasta(conn, cliente_id)

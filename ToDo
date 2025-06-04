@@ -1,9 +1,54 @@
 - Testar com arquivos mais  grandes
 
+    CyberNet Dom Basílio
+    Oferece arquivos de teste para download, incluindo um arquivo de 500 MB para testar sua conexão.
+    [🔗Z este sua conexão! – CyberNet](https://cybernetdombasilio.com.br/site/index.php/teste-sua-conexao/)
+
+    GetSampleFiles.com
+    Disponibiliza uma variedade de arquivos de amostra em diferentes formatos e tamanhos, incluindo arquivos compactados como ZIP, RAR, TAR, 7Z, GZIP e BZIP2.
+    [🔗 Obter arquivos de amostra para teste](https://pt.getsamplefiles.com/arquivos-de-amostra)
+
+
 - Implementar mais de um cliente
   - Multithreading  
   
 - Implementar checksum no cliente e servidor checa 
+
+    Como funciona:
+
+    Cliente:
+
+        Calcula o checksum MD5 do arquivo antes de enviar.
+
+        Envia para o servidor:
+
+            Caminho relativo do arquivo
+
+            Tamanho do arquivo
+
+            Checksum MD5
+
+            Conteúdo do arquivo
+
+    Servidor:
+
+        Recebe os metadados (nome, tamanho, checksum) e o conteúdo do arquivo.
+
+        Calcula o checksum do conteúdo recebido.
+
+        Compara o checksum calculado com o checksum enviado pelo cliente.
+
+        Se bater:
+
+            Salva o arquivo
+
+            Envia um ACK_FILE_OK
+
+        Se não bater:
+
+            Não salva (ou sinaliza erro)
+
+            Envia um ACK_FILE_FAIL
 
 - Análise por dias da semana
   - Transformar o timestamp em dia da semana
