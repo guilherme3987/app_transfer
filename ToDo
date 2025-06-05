@@ -52,3 +52,16 @@
 
 - Análise por dias da semana
   - Transformar o timestamp em dia da semana
+
+######################################  VERSÕES ###############################################
+- Versao_1
+    - TCP/IP
+    - Threads
+
+- Versao_2
+    - Versao_1 
+    - Envio de arquivos e diretórios
+
+- Versao_3
+    - Versao_2
+    - Cada cliente terá um diretório e quando for enviado aparce no servidor e no cliente. Outros clientes podem ver só se o cliente que enviar escolher a opção publico ou privado. Implemente apartir desse código.
