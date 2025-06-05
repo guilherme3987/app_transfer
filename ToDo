@@ -65,3 +65,32 @@
 - Versao_3
     - Versao_2
     - Cada cliente terá um diretório e quando for enviado aparce no servidor e no cliente. Outros clientes podem ver só se o cliente que enviar escolher a opção publico ou privado. Implemente apartir desse código.
+
+#####################################  IA #####################################################
+Por que usar chunks?
+Evita sobrecarga de memória
+
+Ler um arquivo de 1 GB de uma vez consumiria toda a RAM.
+
+Chunks processam dados gradualmente.
+
+Melhor desempenho em redes
+
+Pacotes menores trafegam com mais eficiência.
+
+Permite início do processamento antes do recebimento total.
+
+Tolerância a falhas
+
+Se a conexão cair, parte dos dados já foi recebida/salva.
+
+Exemplo Prático
+Se um arquivo de 12 KB é recebido com TAM_BUFFER = 4096:
+
+1º chunk: 4096 bytes
+
+2º chunk: 4096 bytes
+
+3º chunk: 3808 bytes (restante)
+
+Todos são concatenados no final (b''.join(chunks)) para formar o arquivo completo.
