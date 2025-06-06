@@ -66,6 +66,7 @@
     - Versao_2
     - Cada cliente terá um diretório e quando for enviado aparce no servidor e no cliente. Outros clientes podem ver só se o cliente que enviar escolher a opção publico ou privado. Implemente apartir desse código.
 
+-  Versão 2 é mais robusta e rápida por conta do das funç~eos de cabeçalho
 
 '''
 Servidor que recebe arquivos de clientes, verifica a integridade dos dados e salva os arquivos recebidos.
