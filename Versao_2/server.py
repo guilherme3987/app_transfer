@@ -1,60 +1,103 @@
 import socket
 import os
-import uuid  
-import hashlib
-from datetime import datetime
-import threading
-from con_config import obter_dados_conexao 
+
+from threading import Thread
+
+from Funcoes_aux.con_config import obter_dados_conexao 
+from Funcoes_aux.checksum import calcular_checksum_dados
+
+from Funcoes_aux.cabecalho import criar_cabecalho_arquivo, receber_cabecalho, enviar_cabecalho, receber_dados, receber_dados_com_cabecalho 
 
 IP, PORT, TAM_BUFFER, TAM_CABECALHO = obter_dados_conexao()
 
+DIRETORIO_DESTINO = "arquivos_recebidos"
 
-def calcular_checksum_dados(dados): #MD5 é uma forma de checksum
-    hasher = hashlib.sha256()
-    hasher.update(dados)
-    return hasher.hexdigest()
+def iniciar_servidor():
+    print("\n##########################\n<ENTROU EM INICIAR_SERVIDOR>\n############################")
 
-def receber_arquivo(sock, nome_arquivo, tamanho, checksum_esperado, diretorio_destino):
-        print("<ENTROU EM RECEBER_ARQUIVO>")
-        print(f"Recebendo arquivo: {nome_arquivo}, Tamanho: {tamanho}, Checksum esperado: {checksum_esperado}")
+    if not os.path.exists(DIRETORIO_DESTINO):
+        os.makedirs(DIRETORIO_DESTINO)
+    
+    servidor_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    servidor_socket.bind((IP, PORT))
+    servidor_socket.listen()  
+    
+    print(f"\n### Servidor iniciado em {IP}:{PORT} ###\n")
 
-        
-        caminho_completo = os.path.join(diretorio_destino, nome_arquivo)
-        os.makedirs(os.path.dirname(caminho_completo), exist_ok=True)
-        
-        enviar_dados(sock, b"OK")  # OK em bytes para indicar que o servidor está pronto para receber o arquivo
-        
-        chunks = []
-        bytes_recebidos = 0
-        
-        while bytes_recebidos < tamanho:
-            chunk = sock.recv(min(TAM_BUFFER, tamanho - bytes_recebidos))
-            if not chunk:
-               print("Conexão encerrada prematuramente")
+    while True:
+        cliente_socket, addr = servidor_socket.accept()
+        print(f"\n### Nova conexão de {addr[0]}:{addr[1]} ###")
             
-            chunks.append(chunk)
-            bytes_recebidos += len(chunk)
-            print(f"Recebidos {bytes_recebidos}/{tamanho} bytes ({bytes_recebidos/tamanho:.1%})", end='\r')
-        
-        dados_recebidos = b''.join(chunks)
-        checksum_recebido = calcular_checksum_dados(dados_recebidos)
-        
-        if checksum_recebido != checksum_esperado:
-            erro_msg = f"ERRO: Checksum não corresponde (esperado: {checksum_esperado}, recebido: {checksum_recebido})"
-            enviar_dados(sock, erro_msg.encode('utf-8'))
-            print(f"\n{erro_msg}")
-            return False
-        
-        with open(caminho_completo, 'wb') as f:
-            f.write(dados_recebidos)
-            
-        enviar_dados(sock, b"Arquivo recebido com sucesso")
-        print(f"\nArquivo {nome_arquivo} salvo em {caminho_completo}")
-        return True
+        thread = Thread(target=lidar_cliente, args=(cliente_socket, addr))
+        thread.start()
+        print(f"\n### Thread iniciada para {addr[0]}:{addr[1]} ###")
+                
+    servidor_socket.close()
 
-def enviar_dados(sock, dados):
-    """Função básica para enviar dados"""
+def enviar_resposta(sock, dados):
+
+    print("\n##########################\n<ENTROU EM ENVIAR_RESPOSTA (SERVER)>\n############################")
+    tamanho = len(dados)
+    cabecalho_tamanho = f"{tamanho: <{TAM_CABECALHO}}".encode('utf-8')
+    sock.sendall(cabecalho_tamanho + dados)
+    print(f"Resposta enviada com tamanho: {tamanho} bytes. Conteúdo: {dados.decode('utf-8').strip()}")
+
+
+def lidar_cliente(cliente_socket, addr):
+    print("\n##########################\n<ENTROU EM LIDAR_CLIENTE>\n############################")
+
+    print(f"\nNova conexão de {addr}")
+
     try:
-        sock.sendall(dados)
+        while True:
+            cabecalho_info = receber_cabecalho(cliente_socket)
+            if not cabecalho_info:
+                print(f"Cliente {addr[0]} desconectou")
+                break
+
+            tipo = cabecalho_info['tipo']
+            tamanho = cabecalho_info['tamanho']
+            checksum_esperado = cabecalho_info['checksum']
+            nome_arquivo = cabecalho_info['nome']
+            print(f"\n### Tipo: {tipo}, Tamanho: {tamanho}, Checksum esperado: {checksum_esperado}, Nome do arquivo: {nome_arquivo} ###\n")
+
+            ok_response = b"OK"
+            enviar_resposta(cliente_socket, ok_response) 
+
+            # Receber os dados do arquivo
+            dados_arquivo = receber_dados(cliente_socket, tamanho)
+            if not dados_arquivo:
+                print(f"Não recebeu dados completos de {addr[0]}")
+                break
+
+            # Verificar o checksum
+            checksum_recebido = calcular_checksum_dados(dados_arquivo)
+            print(f"\n### Checksum recebido: {checksum_recebido} ###\n")
+            
+            if checksum_recebido != checksum_esperado:
+                cliente_socket.sendall(b"❌ [Erro]  Checksum invalido")
+                continue
+
+            # Salvar o arquivo
+            caminho_completo = os.path.join(DIRETORIO_DESTINO, nome_arquivo)
+            os.makedirs(os.path.dirname(caminho_completo), exist_ok=True)
+            
+            with open(caminho_completo, 'wb') as f:
+                f.write(dados_arquivo)
+            
+            cliente_socket.sendall(b"Arquivo recebido com sucesso")
+            print(f"\n### Arquivo {nome_arquivo} salvo em {caminho_completo} ###\n")
+            break
+
+    except ConnectionResetError:
+        print(f"Conexão com {addr[0]} foi resetada")
     except Exception as e:
-        print(f"Erro ao enviar dados: {e}")
+        print(f"❌ [Erro] com {addr[0]}: {e}")
+    finally:
+        cliente_socket.close()
+        print(f"Conexão com {addr[0]} encerrada")
+
+
+
+if __name__ == "__main__":
+    iniciar_servidor()

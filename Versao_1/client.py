@@ -1,7 +1,4 @@
 import socket
-#import os
-#import hashlib
-#from datetime import datetime
 from con_config import obter_dados_conexao
 
 IP, PORT, TAM_BUFFER, TAM_CABECALHO = obter_dados_conexao()

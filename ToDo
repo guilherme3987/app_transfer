@@ -66,6 +66,13 @@
     - Versao_2
     - Cada cliente terá um diretório e quando for enviado aparce no servidor e no cliente. Outros clientes podem ver só se o cliente que enviar escolher a opção publico ou privado. Implemente apartir desse código.
 
+
+'''
+Servidor que recebe arquivos de clientes, verifica a integridade dos dados e salva os arquivos recebidos.
+
+Cabeçalho do arquivo:
+    tipo|tamanho|checksum|nome
+'''
 #####################################  IA #####################################################
 Por que usar chunks?
 Evita sobrecarga de memória

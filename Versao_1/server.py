@@ -1,7 +1,4 @@
 import socket
-#import os
-#import hashlib
-#from datetime import datetime
 import threading
 from con_config import obter_dados_conexao
 
