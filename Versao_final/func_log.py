@@ -2,42 +2,45 @@ import csv
 import os
 from datetime import datetime
 
-def log():
-    print("#### <ENTROU EM log> ####\n")
+def obter_config_log():
+    print("#### <ENTROU EM obter_config_log> ####\n")
 
-    LOG_FILE = "log.csv"
-    LOG_CABECALHO = [
+    NOME_ARQUIVO_LOG = "log.csv"
+    CABECALHO_LOG = [
         'TIMESTAMP',
-        'CLIENTE_ID',
+        'ID_CLIENTE',
         'IP_CLIENTE',
         'ARQUIVO',
         'TAMANHO_ARQUIVO_BYTES',
         'TIPO_ARQUIVO',
         'STATUS',
     ]
-    print(f"LOG_FILE: {LOG_FILE}\nLOG_CABECALHO: {LOG_CABECALHO}\n")
+    print(f"NOME_ARQUIVO_LOG: {NOME_ARQUIVO_LOG}\nCABECALHO_LOG: {CABECALHO_LOG}\n")
     
-    return LOG_FILE, LOG_CABECALHO
+    return NOME_ARQUIVO_LOG, CABECALHO_LOG
 
-LOG_FILE, LOG_CABECALHO = log()
+NOME_ARQUIVO_LOG, CABECALHO_LOG = obter_config_log()
 
-def criar_log():##
+
+def inicializar_log():##
     print("#### <ENTROU EM criar_log> ####\n") 
 
-    if not os.path.exists(LOG_FILE):
-        with open(LOG_FILE, 'w', encoding='utf-8') as f:
+    if not os.path.exists(NOME_ARQUIVO_LOG):
+        with open(NOME_ARQUIVO_LOG, 'w', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(LOG_CABECALHO)            
-        print(f"Arquivo de log '{LOG_FILE}' criado com sucesso.\n")
+            writer.writerow(CABECALHO_LOG)            
+        print(f"Arquivo de log '{NOME_ARQUIVO_LOG}' criado com sucesso.\n")
+    else:
+        print(f"Arquivo de log '{NOME_ARQUIVO_LOG}' já existe.\n")
 
-def registra_log(cliente_id, ip_cliente, arquivo, tamanho_arquivo, tipo_arquivo, status):
+def registrar_log(cliente_id, ip_cliente, arquivo, tamanho_arquivo, tipo_arquivo, status):
     print("#### <ENTROU EM registra_log> ####\n")
 
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
-    with open(LOG_FILE, 'a', encoding='utf-8') as f:
+    with open(NOME_ARQUIVO_LOG, 'a', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow([
+        writer.writerow([ 
             timestamp,
             cliente_id,
             ip_cliente,

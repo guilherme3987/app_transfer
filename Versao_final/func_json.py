@@ -2,36 +2,35 @@
 import os
 import json
 
-TAMANHO = 1024
+TAMANHO_BUFFER = 4096 
 
 # Recebe tamanho, confirma e recebe dados em pedaços
 def receber_dados_json(sock):
     print("#### <ENTROU EM receber_dados_json> ####\n")
 
-    cabecalho = sock.recv(TAMANHO).decode('utf-8')
+    cabecalho = sock.recv(TAMANHO_BUFFER).decode('utf-8')
 
-    padrao_json = "JSON_TAMANHO:"
-
+    padrao_json = "JSON_TAMANHO:" # Padronizado o cabeçalho JSON
+    
     if not cabecalho.startswith(padrao_json):
         print("ERRO: Cabeçalho inválido recebido:", cabecalho)
         sock.sendall("ERRO_CABECALHO_JSON".encode('utf-8'))
         return None
-
+    
     try:
         tamanho_json = int(cabecalho.replace(padrao_json, "").strip())
         print("INFO: Tamanho do JSON a ser recebido:", tamanho_json)
-
-        # CORREÇÃO: Encodar a string para bytes
-        sock.sendall("OK_PARA_JSON".encode('utf-8')) #
-
+        
+        sock.sendall("OK_PARA_JSON".encode('utf-8')) # Encodar a string para bytes
+        
         dados_recebidos = 0
         json_buffer = b""
 
         while dados_recebidos < tamanho_json:
-            bytes_para_receber = min(tamanho_json - dados_recebidos, TAMANHO)
+            bytes_para_receber = min(tamanho_json - dados_recebidos, TAMANHO_BUFFER)
             pacote = sock.recv(bytes_para_receber)
 
-            if not pacote:
+            if not pacote: # Conexão perdida
                 print("ERRO: Conexão perdida ou pacote vazio durante o recebimento do JSON.")
                 return None
 
@@ -52,18 +51,18 @@ def receber_dados_json(sock):
     except Exception as e:
         print(f"ERRO: Erro inesperado ao receber dados JSON: {e}")
         return None
-
+    
 def enviar_json(sock, dados):
     print("#### <ENTROU EM enviar_json> ####\n")
 
     json_string = json.dumps(dados).encode('utf-8')
-
+    
     tamanho = len(json_string)
 
-    sock.sendall(f"JSON_TAMANHO:{tamanho}".encode('utf-8'))
+    sock.sendall(f"JSON_TAMANHO:{tamanho}".encode('utf-8')) # Padronizado o cabeçalho JSON
 
-    resposta = sock.recv(TAMANHO).decode('utf-8')
-
+    resposta = sock.recv(TAMANHO_BUFFER).decode('utf-8') # Usar TAMANHO_BUFFER
+    
     if resposta == "OK_PARA_JSON":
         sock.sendall(json_string)
         print("INFO: JSON enviado com sucesso.")
@@ -71,8 +70,8 @@ def enviar_json(sock, dados):
     else:
         print(f"ERRO: Cliente não estava pronto para receber JSON. Resposta: {resposta}")
         return False
-
-def get_relative_path(full_path, base_path):
-    print("#### <ENTROU EM get_relative_path> ####\n")
-
-    return os.path.relpath(full_path, base_path)
+    
+def obter_caminho_relativo(caminho_completo, caminho_base): # Renomeada de 'caminho_arquivo' e corrigido o nome da variável
+    print("#### <ENTROU EM obter_caminho_relativo> ####\n")
+    
+    return os.path.relpath(caminho_completo, caminho_base)
