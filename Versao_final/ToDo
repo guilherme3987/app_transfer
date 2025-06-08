@@ -1,0 +1,107 @@
+- Testar com arquivos mais  grandes
+
+    CyberNet Dom Basílio
+    Oferece arquivos de teste para download, incluindo um arquivo de 500 MB para testar sua conexão.
+    [🔗Z este sua conexão! – CyberNet](https://cybernetdombasilio.com.br/site/index.php/teste-sua-conexao/)
+
+    GetSampleFiles.com
+    Disponibiliza uma variedade de arquivos de amostra em diferentes formatos e tamanhos, incluindo arquivos compactados como ZIP, RAR, TAR, 7Z, GZIP e BZIP2.
+    [🔗 Obter arquivos de amostra para teste](https://pt.getsamplefiles.com/arquivos-de-amostra)
+
+
+- Implementar mais de um cliente
+  - Multithreading  
+  
+- Implementar checksum no cliente e servidor checa 
+
+    Como funciona:
+
+    Cliente:
+
+        Calcula o checksum MD5 do arquivo antes de enviar.
+
+        Envia para o servidor:
+
+            Caminho relativo do arquivo
+
+            Tamanho do arquivo
+
+            Checksum MD5
+
+            Conteúdo do arquivo
+
+    Servidor:
+
+        Recebe os metadados (nome, tamanho, checksum) e o conteúdo do arquivo.
+
+        Calcula o checksum do conteúdo recebido.
+
+        Compara o checksum calculado com o checksum enviado pelo cliente.
+
+        Se bater:
+
+            Salva o arquivo
+
+            Envia um ACK_FILE_OK
+
+        Se não bater:
+
+            Não salva (ou sinaliza erro)
+
+            Envia um ACK_FILE_FAIL
+
+- Análise por dias da semana
+  - Transformar o timestamp em dia da semana
+
+######################################  VERSÕES ###############################################
+- Versao_1
+    - TCP/IP
+    - Threads
+
+- Versao_2
+    - Versao_1 
+    - Envio de arquivos e diretórios
+
+- Versao_3
+    - Versao_2
+    - Cada cliente terá um diretório e quando for enviado aparce no servidor e no cliente. Outros clientes podem ver só se o cliente que enviar escolher a opção publico ou privado. Implemente apartir desse código.
+
+-  Versão 2 é mais robusta e rápida por conta do das funç~eos de cabeçalho.
+-  Versão 2 não está suportando arquivos/pastas muito grandes
+    - pedaços pequenos e enviar cada pedaço. (CLIENTE)
+    - receber cada pedaço e escrevê-lo imediatamente no disco. (SERVER)
+
+'''
+Servidor que recebe arquivos de clientes, verifica a integridade dos dados e salva os arquivos recebidos.
+
+Cabeçalho do arquivo:
+    tipo|tamanho|checksum|nome
+'''
+#####################################  IA #####################################################
+Por que usar chunks?
+Evita sobrecarga de memória
+
+Ler um arquivo de 1 GB de uma vez consumiria toda a RAM.
+
+Chunks processam dados gradualmente.
+
+Melhor desempenho em redes
+
+Pacotes menores trafegam com mais eficiência.
+
+Permite início do processamento antes do recebimento total.
+
+Tolerância a falhas
+
+Se a conexão cair, parte dos dados já foi recebida/salva.
+
+Exemplo Prático
+Se um arquivo de 12 KB é recebido com TAM_BUFFER = 4096:
+
+1º chunk: 4096 bytes
+
+2º chunk: 4096 bytes
+
+3º chunk: 3808 bytes (restante)
+
+Todos são concatenados no final (b''.join(chunks)) para formar o arquivo completo.

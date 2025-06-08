@@ -1,19 +1,15 @@
-# comandos_servidor.py
 import os
 import json
 from datetime import datetime
+import time 
 
-# Importa as funções auxiliares
+
 from func_json import receber_dados_json, enviar_json, obter_caminho_relativo, TAMANHO_BUFFER # Usar TAMANHO_BUFFER
-from func_log import registrar_log # Importa a função de registro de log
+from func_log import registrar_log 
 
-
-# Note: As funções aqui recebem 'instancia_servidor' como primeiro argumento
-# para acessar os atributos da instância do servidor (dados_clientes, trava_clientes, tamanho_buffer, etc.)
-# e as funções de outros módulos (enviar_json, receber_dados_json, registrar_log).
 
 def lidar_envio_arquivo_diretorio(instancia_servidor, conn, id_cliente, ip_cliente, caminho_armazenamento_cliente, comando):
-    print(f"#### <ENTROU EM lidar_envio_arquivo_diretorio> ####\nComando: {comando}\n") # Corrigido nome da função no print
+    print(f"#### <ENTROU EM lidar_envio_arquivo_diretorio> ####\nComando: {comando}\n") 
     
     try:
         partes = comando.split(":", 3)
@@ -38,15 +34,17 @@ def lidar_envio_arquivo_diretorio(instancia_servidor, conn, id_cliente, ip_clien
             try:
                 os.makedirs(caminho_destino, exist_ok=True) 
                 conn.sendall("DIR_CRIADO".encode('utf-8'))
-                registrar_log(id_cliente, ip_cliente, caminho_relativo, 0, tipo_arquivo, 'sucesso')
+                registrar_log(id_cliente, ip_cliente, caminho_relativo, 0, tipo_arquivo, 'sucesso', None, None) # Passa None para tempo/taxa
+                print(f"INFO: Log registrado para criação de diretório: {caminho_destino}\n")
                 print(f"Diretório criado: {caminho_destino}\n")
             except Exception as e:
                 conn.sendall("ERRO:CRIACAO_DIRETORIO".encode('utf-8'))
-                registrar_log(id_cliente, ip_cliente, caminho_relativo, 0, tipo_arquivo, 'falha')
+                registrar_log(id_cliente, ip_cliente, caminho_relativo, 0, tipo_arquivo, 'falha', None, None) # Passa None para tempo/taxa
                 print(f"ERRO ao criar diretório {caminho_destino}: {e}\n")
         else:
             # Upload de arquivo
             tipo_arquivo = 'arquivo' 
+            tempo_inicio = time.time() # Inicia a contagem de tempo
             try:
                 tamanho_arquivo = int(tamanho_ou_marcador_dir)
                 os.makedirs(os.path.dirname(caminho_destino), exist_ok=True)
@@ -59,27 +57,51 @@ def lidar_envio_arquivo_diretorio(instancia_servidor, conn, id_cliente, ip_clien
                         dados = conn.recv(bytes_para_ler)
                         if not dados:
                             print(f"ERRO: Conexão encerrada antes de completar o upload do {tipo_arquivo}.\n")
-                            registrar_log(id_cliente, ip_cliente, caminho_relativo, tamanho_arquivo, tipo_arquivo, 'falha')
+                            # Registra falha com tempo/taxa, pois a transferência foi interrompida
+                            # Calcula o tempo decorrido e a taxa de transferência até o momento da falha
+                            tempo_decorrido = time.time() - tempo_inicio
+                            taxa_transferencia_mbps = (bytes_recebidos / (1024 * 1024)) / (tempo_decorrido + 0.001)  # Evita divisão por zero
+                            
+                            # Registra o log com os dados da falha
+                            registrar_log(
+                                id_cliente, 
+                                ip_cliente, 
+                                caminho_relativo, 
+                                bytes_recebidos, 
+                                tipo_arquivo, 
+                                'falha', 
+                                tempo_decorrido, 
+                                taxa_transferencia_mbps
+                            )
                             break
                         arquivo_destino.write(dados)
                         bytes_recebidos += len(dados)
                 
+                tempo_fim = time.time() # Finaliza a contagem de tempo
+                duracao_segundos = round(tempo_fim - tempo_inicio, 2) # Calcula a duração
+                
+                taxa_transferencia_mbps = 0
+                if duracao_segundos > 0 and bytes_recebidos > 0: 
+                    taxa_transferencia_mbps = (bytes_recebidos / (1024 * 1024)) / duracao_segundos # Calcula taxa em MB/s
+
                 if bytes_recebidos == tamanho_arquivo:
                     conn.sendall("ARQUIVO_RECEBIDO_OK".encode('utf-8'))
-                    registrar_log(id_cliente, ip_cliente, caminho_relativo, tamanho_arquivo, tipo_arquivo, 'sucesso')
-                    print(f"Arquivo recebido: {caminho_destino} ({bytes_recebidos} bytes)\n")
+                    # Registra sucesso com tempo e taxa
+                    registrar_log(id_cliente, ip_cliente, caminho_relativo, tamanho_arquivo, tipo_arquivo, 'sucesso', duracao_segundos, taxa_transferencia_mbps) 
+                    print(f"Arquivo recebido: {caminho_destino} ({bytes_recebidos} bytes) em {duracao_segundos}s ({taxa_transferencia_mbps:.2f} MB/s)\n")
                 else:
                     conn.sendall("ERRO:UPLOAD_INCOMPLETO".encode('utf-8'))
-                    registrar_log(id_cliente, ip_cliente, caminho_relativo, tamanho_arquivo, tipo_arquivo, 'falha')
-                    print(f"Upload incompleto: {bytes_recebidos}/{tamanho_arquivo} bytes\n")
-            except ValueError:   #IA
+                    # Registra falha com bytes recebidos, tempo e taxa até o momento da falha
+                    registrar_log(id_cliente, ip_cliente, caminho_relativo, bytes_recebidos, tipo_arquivo, 'falha', duracao_segundos, taxa_transferencia_mbps) 
+                    print(f"Upload incompleto: {bytes_recebidos}/{tamanho_arquivo} bytes em {duracao_segundos}s ({taxa_transferencia_mbps:.2f} MB/s)\n")
+            except ValueError:
                 print(f"ERRO: Tamanho do arquivo inválido recebido para upload: {tamanho_ou_marcador_dir}\n")
                 conn.sendall("ERRO:TAMANHO_ARQUIVO_INVALIDO".encode('utf-8'))
-                registrar_log(id_cliente, ip_cliente, caminho_relativo, 0, tipo_arquivo, 'falha')
+                registrar_log(id_cliente, ip_cliente, caminho_relativo, 0, tipo_arquivo, 'falha', None, None) # Loga com 0 e None
             except Exception as e:
                 print(f"ERRO: Erro no upload do arquivo {caminho_relativo}: {e}\n")
                 conn.sendall("ERRO:FALHA_RECEBER_ARQUIVO".encode('utf-8'))
-                registrar_log(id_cliente, ip_cliente, caminho_relativo, 0, tipo_arquivo, 'falha') # Tamanho 0 em caso de erro
+                registrar_log(id_cliente, ip_cliente, caminho_relativo, 0, tipo_arquivo, 'falha', None, None) # Loga com 0 e None
     except Exception as e:
         conn.sendall("ERRO:ERRO_INTERNO".encode('utf-8'))
         print(f"ERRO interno na função de upload: {e}\n")
@@ -123,10 +145,12 @@ def lidar_listar_pastas_publicas(instancia_servidor, conn, id_cliente_solicitant
 def lidar_listar_arquivos(instancia_servidor, conn, id_cliente_atual, caminho_armazenamento_cliente, comando):
     print(f"#### <ENTROU EM lidar_listar_arquivos> ####\nComando: {comando}\n")
 
-    id_cliente_alvo = comando.split(":")[1] # ID do cliente para listar arquivos, split é usado para separar o comando e o ID do cliente
+    id_cliente_alvo = comando.split(":")[1]
     caminho_para_listar = ""
-    if len(comando.split(":")[1]) > 2: # Verifica se o comando contém um caminho para listar arquivos
-        caminho_para_listar = comando.split(":", 2)[2] 
+    # CORRIGIDO: A verificação de len(comando.split(":")[1]) > 2 estava incorreta.
+    # Deve-se verificar se existe a terceira parte no comando após o split por ":", que é o índice 2.
+    if len(comando.split(":")) > 2: # Verifica se existe uma terceira parte no comando
+        caminho_para_listar = comando.split(":", 2)[2] # Pega a terceira parte (índice 2)
     
     diretorio_base = ""
     if id_cliente_alvo == id_cliente_atual:
@@ -143,10 +167,11 @@ def lidar_listar_arquivos(instancia_servidor, conn, id_cliente_atual, caminho_ar
             enviar_json(conn, {"erro": "CLIENTE_NAO_ENCONTRADO"}) 
             print(f"ERRO: Cliente {id_cliente_alvo} não encontrado.\n")
             return
+    
     caminho_completo_no_servidor = os.path.join(diretorio_base, caminho_para_listar) 
 
     if not os.path.exists(caminho_completo_no_servidor):
-        enviar_json(conn, {"erro": "CAMINHO_NAO_ENCONTRADO_NO_SERVIDOR"}) 
+        enviar_json(conn, {"erro": "CAMINHO_NAO_ENCONTRADO_NO_SERVIDORES"}) 
         print(f"ERRO: Caminho '{caminho_completo_no_servidor}' não encontrado.\n")
         return
 

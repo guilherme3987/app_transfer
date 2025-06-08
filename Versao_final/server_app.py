@@ -1,4 +1,3 @@
-# servidor_app.py
 import socket
 import threading
 import json
@@ -50,23 +49,22 @@ class Servidor:
 
                 self.cont_ip = {}
                 for id_cliente_completo_carregado in self.dados_clientes:
-                    partes = id_cliente_completo_carregado.split('_')#separa o ID do cliente e o contador
+                    partes = id_cliente_completo_carregado.split('_')
                     if len(partes) > 1:
-                        ip_formatado_partes = partes[:-1]   #pega todas as partes menos a última
-                        if ip_formatado_partes and ip_formatado_partes[-1] == '':# se a última parte for vazia, remove-a
+                        ip_formatado_partes = partes[:-1]
+                        if ip_formatado_partes and ip_formatado_partes[-1] == '':
                             ip_formatado_partes.pop()
-                        ip_formatado = '_'.join(ip_formatado_partes)#Ex: '192_168_0_1' str
+                        ip_formatado = '_'.join(ip_formatado_partes)
 
-                        try:#bloco para tentar converter a última parte do ID do cliente para um inteiro
+                        try:
                             contador_atual = int(partes[-1])
-                            if ip_formatado in self.cont_ip:#testa se o IP já está no dicionário
-                                if contador_atual + 1 > self.cont_ip[ip_formatado]:#testa se o contador atual é maior que o contador armazenado
-                                    self.cont_ip[ip_formatado] = contador_atual + 1 #instancia o contador com o valor atual + 1
+                            if ip_formatado in self.cont_ip:
+                                self.cont_ip[ip_formatado] = max(self.cont_ip[ip_formatado], contador_atual + 1)
                             else:
                                 self.cont_ip[ip_formatado] = contador_atual + 1
                         except ValueError:
                             print(f"AVISO: ID de cliente '{id_cliente_completo_carregado}' com formato de contador inválido. Ignorando na contagem de IP.\n")
-                            continue
+                            continue#IA: continue serve para pular o loop e continuar com o próximo cliente
 
             except json.JSONDecodeError as e:
                 print(f"ERRO: Erro ao decodificar metadados dos clientes de '{ARQUIVO_DADOS_CLIENTES}': {e}. Iniciando com dados vazios.\n")
@@ -78,8 +76,7 @@ class Servidor:
 
         for id_cliente_carregado in self.dados_clientes:
             if id_cliente_carregado not in self.trava_clientes:
-                self.trava_clientes[id_cliente_carregado] = threading.Lock()#trava para cada cliente carregado
-        print(f"INFO: Travas de clientes carregadas: {self.trava_clientes}\n")
+                self.trava_clientes[id_cliente_carregado] = threading.Lock()
 
     def salvar_dados_clientes(self):
         print("#### <ENTROU EM salvar_dados_clientes (Servidor)> ####\n")
@@ -114,6 +111,7 @@ class Servidor:
         
         return id_cliente_novo, caminho_pasta_cliente
 
+
     def lidar_com_conexao_cliente(self, conn, addr):
         print("#### <ENTROU EM lidar_com_conexao_cliente (Servidor)> ####\n")
         ip_cliente, _ = addr
@@ -130,14 +128,16 @@ class Servidor:
                 print(f"INFO: Novo cliente {id_cliente_atual} conectado e pasta criada.\n")
 
             elif mensagem_inicial.startswith("USAR_PASTA_EXISTENTE:"):
-                partes = mensagem_inicial.split(":")
+                partes = mensagem_inicial.split(":") 
                 if len(partes) == 2:
                     id_cliente_recebido = partes[1]
+                    #Testar se o ID do cliente recebido é válido e pertence ao IP do cliente
                     if id_cliente_recebido in self.dados_clientes and self.dados_clientes[id_cliente_recebido]['ip'] == ip_cliente:
                         id_cliente_atual = id_cliente_recebido
                         caminho_armazenamento_cliente = self.dados_clientes[id_cliente_atual]['caminho']
                         conn.sendall(f"PASTA_REUTILIZADA:{id_cliente_atual}".encode('utf-8'))
                         print(f"INFO: Cliente {ip_cliente} reconectado e usando pasta existente: {id_cliente_atual}\n")
+                    
                     else:
                         conn.sendall("ERRO:ID_PASTA_INVALIDA_OU_ACESSO_NEGADO".encode('utf-8'))
                         print(f"ERRO: Cliente {ip_cliente} tentou usar ID de pasta inválido ou não pertencente: {id_cliente_recebido}\n")
@@ -198,3 +198,4 @@ class Servidor:
 if __name__ == "__main__":
     servidor = Servidor()
     servidor.iniciar()
+

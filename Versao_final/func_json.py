@@ -1,13 +1,12 @@
-# func_json.py
 import os
 import json
 
-TAMANHO_BUFFER = 4096 
+TAMANHO_BUFFER = 1024 
 
 # Recebe tamanho, confirma e recebe dados em pedaços
 def receber_dados_json(sock):
     print("#### <ENTROU EM receber_dados_json> ####\n")
-
+    
     cabecalho = sock.recv(TAMANHO_BUFFER).decode('utf-8')
 
     padrao_json = "JSON_TAMANHO:" # Padronizado o cabeçalho JSON
@@ -59,9 +58,9 @@ def enviar_json(sock, dados):
     
     tamanho = len(json_string)
 
-    sock.sendall(f"JSON_TAMANHO:{tamanho}".encode('utf-8')) # Padronizado o cabeçalho JSON
+    sock.sendall(f"JSON_TAMANHO:{tamanho}".encode('utf-8')) 
 
-    resposta = sock.recv(TAMANHO_BUFFER).decode('utf-8') # Usar TAMANHO_BUFFER
+    resposta = sock.recv(TAMANHO_BUFFER).decode('utf-8')
     
     if resposta == "OK_PARA_JSON":
         sock.sendall(json_string)
@@ -71,7 +70,7 @@ def enviar_json(sock, dados):
         print(f"ERRO: Cliente não estava pronto para receber JSON. Resposta: {resposta}")
         return False
     
-def obter_caminho_relativo(caminho_completo, caminho_base): # Renomeada de 'caminho_arquivo' e corrigido o nome da variável
+def obter_caminho_relativo(caminho_completo, caminho_base): 
     print("#### <ENTROU EM obter_caminho_relativo> ####\n")
     
     return os.path.relpath(caminho_completo, caminho_base)

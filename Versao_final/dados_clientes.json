@@ -1,12 +1,12 @@
 {
-    "192_168_1_19_1": {
-        "publico": true,
-        "ip": "192.168.1.19",
-        "caminho": "DIRETORIO_CLIENTES\\192_168_1_19_1"
+    "192_168_41_213_1": {
+        "publico": false,
+        "ip": "192.168.41.213",
+        "caminho": "DIRETORIO_CLIENTES\\192_168_41_213_1"
     },
-    "192_168_1_19_2": {
+    "192_168_41_213_2": {
         "publico": true,
-        "ip": "192.168.1.19",
-        "caminho": "DIRETORIO_CLIENTES\\192_168_1_19_2"
+        "ip": "192.168.41.213",
+        "caminho": "DIRETORIO_CLIENTES\\192_168_41_213_2"
     }
 }
