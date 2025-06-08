@@ -17,7 +17,8 @@ DIRETORIO_CLIENTES_ARMAZENAMENTO, ARQUIVO_DADOS_CLIENTES = obter_diretorios()
 def enviar_arquivo_diretorio(sock, caminho_origem, caminho_base_remoto):
     print("#### <ENTROU EM enviar_arquivo_diretorio (usando os.walk)> ####\n")
 
-    if os.path.isfile(caminho_origem): # Se é um arquivo, envia diretamente
+    #Enviar arquivo
+    if os.path.isfile(caminho_origem): 
         # Calcula o caminho relativo do arquivo em relação ao caminho_base_remoto fornecido
         caminho_relativo_no_servidor = obter_caminho_relativo(caminho_origem, caminho_base_remoto)
         tamanho_arquivo = os.path.getsize(caminho_origem)
@@ -75,7 +76,8 @@ def enviar_arquivo_diretorio(sock, caminho_origem, caminho_base_remoto):
         else:
             print(f"ERRO: Servidor não pronto para receber arquivo '{caminho_origem}': {resposta_servidor}\n")
 
-    elif os.path.isdir(caminho_origem): # Se é um diretório, usa os.walk (percorrer recursivamente)
+    #Enviar diretório
+    elif os.path.isdir(caminho_origem): # Se é um diretório, usa os.walk (percorrer recursivamente - diretórios e subdiretórios)
         print(f"INFO: Iniciando upload de diretório: {caminho_origem}\n")
         
         for raiz_atual, subdiretorios, arquivos in os.walk(caminho_origem): 
@@ -83,7 +85,7 @@ def enviar_arquivo_diretorio(sock, caminho_origem, caminho_base_remoto):
             
 
             if raiz_atual != caminho_origem:
-                comando_dir = f"UPLOAD:true:{caminho_relativo_dir_atual}:MARCADOR_DIR"
+                comando_dir = f"UPLOAD:true:{caminho_relativo_dir_atual}:MARCADOR_DIR"# IA :MARCADOR_DIR é um marcador especial para indicar que é um diretório
 
                 sock.sendall(comando_dir.encode('utf-8'))
                 
@@ -96,13 +98,14 @@ def enviar_arquivo_diretorio(sock, caminho_origem, caminho_base_remoto):
                 else:
                     print(f"ERRO: Servidor não conseguiu criar subdiretório '{caminho_relativo_dir_atual}': {resposta_servidor_dir}\n")
 
+            # Percorre os arquivos no diretório atual
             for nome_arquivo in arquivos:
-                caminho_completo_arquivo = os.path.join(raiz_atual, nome_arquivo)
-                caminho_relativo_arquivo = obter_caminho_relativo(caminho_completo_arquivo, caminho_base_remoto)
+                caminho_completo_arquivo = os.path.join(raiz_atual, nome_arquivo) # Cria o caminho completo do arquivo
+                caminho_relativo_arquivo = obter_caminho_relativo(caminho_completo_arquivo, caminho_base_remoto)# Obtém o caminho relativo do arquivo em relação ao caminho base remoto
                 
                 tamanho_arquivo = os.path.getsize(caminho_completo_arquivo)
 
-                comando_arquivo = f"UPLOAD:false:{caminho_relativo_arquivo}:{tamanho_arquivo}"
+                comando_arquivo = f"UPLOAD:false:{caminho_relativo_arquivo}:{tamanho_arquivo}" # Comando para enviar o arquivo, indicando se é um diretório ou não, o caminho relativo e o tamanho do arquivo
 
                 sock.sendall(comando_arquivo.encode('utf-8'))
 
@@ -249,19 +252,26 @@ def main():
                         print(f"ERRO: Erro ou formato inesperado ao listar pastas públicas.\n")
 
                 elif opcao == '4':
-                    id_alvo = input(f"Digite a ID da pasta para visualizar (sua ID é '{id_cliente_sessao}'): ")
-                    caminho_para_listar = input("Digite o caminho relativo dentro da pasta (deixe vazio para a raiz): ")
+                    id_alvo = input(f"Digite a ID da pasta para visualizar (seu ID é '{id_cliente_sessao}'): ")
+                    
+                    caminho_para_listar = input("Digite o caminho relativo dentro da pasta \n('subdir' ou 'subdir/arquivo.txt')\n(deixe vazio para a raiz): ")
+                    
                     comando_listar = f"LISTAR_ARQUIVOS:{id_alvo}:{caminho_para_listar}"
+                    
                     s.sendall(comando_listar.encode('utf-8'))
+                    
                     info_arquivos = receber_dados_json(s)
 
                     if info_arquivos is not None:
                         if isinstance(info_arquivos, list):
+
                             print(f"\nConteúdo de '{id_alvo}/{caminho_para_listar}':")
+                            
                             if not info_arquivos:
                                 print("(Vazio)\n")
+                            
                             for item in info_arquivos:
-                                if item.get('eh_diretorio'):
+                                if item.get('eh_diretorio'):#IA: get é usado para evitar KeyError se a chave não existir
                                     tipo_str = "DIR"
                                 else:
                                     tipo_str = "ARQUIVO"
@@ -271,7 +281,7 @@ def main():
                                     tamanho_str = ""
                                 print(f"- {item['nome']} [{tipo_str}] {tamanho_str}")
 
-                        if isinstance(info_arquivos, dict) and "erro" in info_arquivos:
+                        if isinstance(info_arquivos, dict) and "erro" in info_arquivos:#ia: Verifica se é um dicionário com chave 'erro'
                             print(f"ERRO: Erro ao listar arquivos: {info_arquivos['erro']}\n")
                         else:
                             print(f"ERRO: Resposta inesperada ao listar arquivos: {info_arquivos}\n")

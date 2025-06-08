@@ -2,7 +2,7 @@ import os
 import json
 # import hashlib
 
-TAMANHO_BUFFER = 1024 
+TAMANHO_BUFFER = 4096 
 
 # Recebe tamanho, confirma e recebe dados em pedaços
 def receber_dados_json(sock):

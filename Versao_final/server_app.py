@@ -5,17 +5,14 @@ import os
 from datetime import datetime
 
 
-# Importa as funções de configuração e utilitários
 from configuracoes import obter_dados_conexao
 from func_json import receber_dados_json, enviar_json, obter_caminho_relativo, TAMANHO_BUFFER
 from func_log import obter_config_log, registrar_log, inicializar_log
 from caminho_dados import obter_diretorios
 
-# Importa as funções de comandos do servidor
 from comandos_servidor import lidar_envio_arquivo_diretorio, lidar_definir_privacidade, lidar_listar_pastas_publicas, lidar_listar_arquivos
 
 
-# Obtenha configurações usando as funções
 HOST, PORTA_SERVIDOR = obter_dados_conexao()
 DIRETORIO_CLIENTES_ARMAZENAMENTO, ARQUIVO_DADOS_CLIENTES = obter_diretorios()
 
@@ -47,19 +44,25 @@ class Servidor:
                     self.dados_clientes = json.load(f)
                 print(f"INFO: DADOS_CLIENTES carregados: {self.dados_clientes}\n")
 
+                #vERFICA se o arquivo contém IDs de clientes com contadores de IP
                 self.cont_ip = {}
-                for id_cliente_completo_carregado in self.dados_clientes:
-                    partes = id_cliente_completo_carregado.split('_')
-                    if len(partes) > 1:
-                        ip_formatado_partes = partes[:-1]
-                        if ip_formatado_partes and ip_formatado_partes[-1] == '':
-                            ip_formatado_partes.pop()
-                        ip_formatado = '_'.join(ip_formatado_partes)
 
+                for id_cliente_completo_carregado in self.dados_clientes:#Percorre sobre os IDs de clientes carregados
+                
+                    partes = id_cliente_completo_carregado.split('_')#Divide em partes: Exemplo: "192_168_0_1_2" se torna ["192", "168", "0", "1", "2"]
+                
+                    if len(partes) > 1:
+                        ip_formatado_partes = partes[:-1]# Exclui a última parte que é o contador
+                
+                        if ip_formatado_partes and ip_formatado_partes[-1] == '':# Se a última parte for vazia, remove-a
+                            ip_formatado_partes.pop()
+                        ip_formatado = '_'.join(ip_formatado_partes)# Formata o IP como "192_168_0_1"
+
+                        # Verifica se a última parte é um número (contador)
                         try:
                             contador_atual = int(partes[-1])
-                            if ip_formatado in self.cont_ip:
-                                self.cont_ip[ip_formatado] = max(self.cont_ip[ip_formatado], contador_atual + 1)
+                            if ip_formatado in self.cont_ip:# Se o IP já estiver no dicionário, atualiza o contador
+                                self.cont_ip[ip_formatado] = max(self.cont_ip[ip_formatado], contador_atual + 1)# Se o contador atual for maior, atualiza para o próximo contador
                             else:
                                 self.cont_ip[ip_formatado] = contador_atual + 1
                         except ValueError:
@@ -102,7 +105,7 @@ class Servidor:
         
         id_cliente_novo = nome_pasta_cliente
         self.dados_clientes[id_cliente_novo] = {'publico': False, 'ip': ip_cliente, 'caminho': caminho_pasta_cliente}
-        self.trava_clientes[id_cliente_novo] = threading.Lock()
+        self.trava_clientes[id_cliente_novo] = threading.Lock()#nOVA TRava para o novo cliente
         
         self.cont_ip[ip_cliente_formatado] = proximo_contador + 1
         
@@ -132,10 +135,15 @@ class Servidor:
                 if len(partes) == 2:
                     id_cliente_recebido = partes[1]
                     #Testar se o ID do cliente recebido é válido e pertence ao IP do cliente
+                    
                     if id_cliente_recebido in self.dados_clientes and self.dados_clientes[id_cliente_recebido]['ip'] == ip_cliente:
+                        
                         id_cliente_atual = id_cliente_recebido
+                        
                         caminho_armazenamento_cliente = self.dados_clientes[id_cliente_atual]['caminho']
+                        
                         conn.sendall(f"PASTA_REUTILIZADA:{id_cliente_atual}".encode('utf-8'))
+                        
                         print(f"INFO: Cliente {ip_cliente} reconectado e usando pasta existente: {id_cliente_atual}\n")
                     
                     else:
@@ -176,7 +184,7 @@ class Servidor:
                     conn.sendall("ERRO:COMANDO_DESCONHECIDO".encode('utf-8'))
                     print(f"AVISO: Comando desconhecido de {id_cliente_atual}: {comando}\n")
 
-        except ConnectionResetError:
+        except ConnectionResetError:#IA: Captura de erro de conexão resetada
             print(f"AVISO: Conexão com {ip_cliente}:{_} resetada.\n")
         except Exception as e:
             print(f"ERRO: Ocorreu um erro ao lidar com o cliente {ip_cliente}:{_}: {e}\n")
@@ -192,6 +200,7 @@ class Servidor:
             print(f"INFO: Servidor ouvindo em {HOST}:{PORTA_SERVIDOR}\n")
             while True:
                 conn, addr = s.accept()
+                #Thread para lidar com cada cliente
                 thread_cliente = threading.Thread(target=self.lidar_com_conexao_cliente, args=(conn, addr))
                 thread_cliente.start()
 
