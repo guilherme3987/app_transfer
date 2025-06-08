@@ -1,5 +1,6 @@
 import os
 import json
+# import hashlib
 
 TAMANHO_BUFFER = 1024 
 
@@ -74,3 +75,19 @@ def obter_caminho_relativo(caminho_completo, caminho_base):
     print("#### <ENTROU EM obter_caminho_relativo> ####\n")
     
     return os.path.relpath(caminho_completo, caminho_base)
+'''
+def calcular_checksum_md5(caminho_arquivo): 
+    print("#### <ENTROU EM calcular_checksum_md5> ####\n")
+    hash_md5 = hashlib.md5()  # Cria um objeto hash MD5
+
+    try:
+        with open(caminho_arquivo, "rb") as f:
+            while True:
+                chunk = f.read(TAMANHO_BUFFER)
+                if not chunk:
+                    break
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()  # Retorna o hash MD5 como uma string hexadecimal
+    except FileNotFoundError:
+        print(f"ERRO: Arquivo não encontrado: {caminho_arquivo}")
+        return None'''

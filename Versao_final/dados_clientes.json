@@ -1,12 +1,37 @@
 {
-    "192_168_41_213_1": {
-        "publico": false,
-        "ip": "192.168.41.213",
-        "caminho": "DIRETORIO_CLIENTES\\192_168_41_213_1"
-    },
-    "192_168_41_213_2": {
+    "192_168_32_1_1": {
         "publico": true,
-        "ip": "192.168.41.213",
-        "caminho": "DIRETORIO_CLIENTES\\192_168_41_213_2"
+        "ip": "192.168.32.1",
+        "caminho": "DIRETORIO_CLIENTES/192_168_32_1_1"
+    },
+    "192_168_32_1_2": {
+        "publico": false,
+        "ip": "192.168.32.1",
+        "caminho": "DIRETORIO_CLIENTES/192_168_32_1_2"
+    },
+    "192_168_32_1_3": {
+        "publico": false,
+        "ip": "192.168.32.1",
+        "caminho": "DIRETORIO_CLIENTES/192_168_32_1_3"
+    },
+    "192_168_32_1_4": {
+        "publico": true,
+        "ip": "192.168.32.1",
+        "caminho": "DIRETORIO_CLIENTES/192_168_32_1_4"
+    },
+    "192_168_32_1_5": {
+        "publico": true,
+        "ip": "192.168.32.1",
+        "caminho": "DIRETORIO_CLIENTES/192_168_32_1_5"
+    },
+    "192_168_32_1_6": {
+        "publico": false,
+        "ip": "192.168.32.1",
+        "caminho": "DIRETORIO_CLIENTES/192_168_32_1_6"
+    },
+    "192_168_32_1_7": {
+        "publico": true,
+        "ip": "192.168.32.1",
+        "caminho": "DIRETORIO_CLIENTES/192_168_32_1_7"
     }
 }

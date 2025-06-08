@@ -147,7 +147,6 @@ def lidar_listar_arquivos(instancia_servidor, conn, id_cliente_atual, caminho_ar
 
     id_cliente_alvo = comando.split(":")[1]
     caminho_para_listar = ""
-    # CORRIGIDO: A verificação de len(comando.split(":")[1]) > 2 estava incorreta.
     # Deve-se verificar se existe a terceira parte no comando após o split por ":", que é o índice 2.
     if len(comando.split(":")) > 2: # Verifica se existe uma terceira parte no comando
         caminho_para_listar = comando.split(":", 2)[2] # Pega a terceira parte (índice 2)
