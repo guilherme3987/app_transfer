@@ -37,7 +37,7 @@ metricas_medias_por_tipo = df_sucesso.groupby('TIPO_ARQUIVO').agg(
     Tempo_Medio_Segundos=('TEMPO_TRANSFERENCIA_SEGUNDOS', 'mean')
 ).reset_index()
 print(metricas_medias_por_tipo)
-
+'''
 
 # Gráfico de Dispersão: Tamanho do Arquivo vs. Velocidade de Transferência
 plt.figure(figsize=(12, 6)) 
@@ -55,6 +55,21 @@ sns.histplot(df_sucesso['TAXA_TRANSFERENCIA_MBPS'], kde=True, bins=30)
 plt.title('Distribuição das Velocidades de Transferência (MB/s)')
 plt.xlabel('Velocidade de Transferência (MB/s)')
 plt.ylabel('Frequência')
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+'''
+
+# Agregando a média da taxa de transferência por hora para visualizar tendências
+df_sucesso['HORA_DO_DIA'] = df_sucesso['TIMESTAMP'].dt.hour
+taxa_media_por_hora = df_sucesso.groupby('HORA_DO_DIA')['TAXA_TRANSFERENCIA_MBPS'].mean().reset_index()
+
+plt.figure(figsize=(12, 6))
+sns.lineplot(x='HORA_DO_DIA', y='TAXA_TRANSFERENCIA_MBPS', data=taxa_media_por_hora, marker='o')
+plt.title('Velocidade Média de Transferência por Hora do Dia')
+plt.xlabel('Hora do Dia')
+plt.ylabel('Velocidade Média de Transferência (MB/s)')
+plt.xticks(range(0, 24)) # Define os ticks do eixo X para todas as horas
 plt.grid(True)
 plt.tight_layout()
 plt.show()
